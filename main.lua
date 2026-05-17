@@ -54,10 +54,12 @@ on_render(function()
     local elapsed = get_time_since_inject() - session_start_time
 
     local eta = "Calculating..."
-    if gained > 0 and elapsed > 10 then
+    if elapsed > 5 then 
         local exp_per_sec = gained / elapsed
         if exp_per_sec > 0 then
             eta = format_time(needed / exp_per_sec)
+        else
+            eta = "Infinite"
         end
     end
 
