@@ -3,7 +3,6 @@ local starting_exp = 0
 local current_level = 0
 local is_initialized = false
 
--- Manual Color Definitions to prevent framework crashes
 local colors = {
     white = color.new(255, 255, 255, 255),
     green = color.new(0, 255, 0, 255),
@@ -16,6 +15,8 @@ local colors = {
 local menu_elements = {
     main_toggle = checkbox:new(true, get_hash("EXP_TRACKER")),
     reset_toggle = checkbox:new(false, get_hash("EXP_RESET_TOGGLE")),
+    pos_x = slider_int:new(0, 3840, 50, get_hash("EXP_TRACKER_X")),
+    pos_y = slider_int:new(0, 2160, 200, get_hash("EXP_TRACKER_Y")),
 }
 
 local function format_time(seconds)
@@ -37,12 +38,11 @@ local function format_num(amount)
     return formatted
 end
 
-local function draw_text_with_shadow(text, pos, size, col)
-    local shadow_offset = 0.005
-    local shadow_pos = vec3:new(pos:x() + shadow_offset, pos:y() - shadow_offset, pos:z())
+local function draw_text_2d_with_shadow(text, x, y, size, col)
+    local shadow_offset = 2
     
-    graphics.text_3d(text, shadow_pos, size, colors.black)
-    graphics.text_3d(text, pos, size, col)
+    graphics.text_2d(text, vec2:new(x + shadow_offset, y + shadow_offset), size, colors.black)
+    graphics.text_2d(text, vec2:new(x, y), size, col)
 end
 
 on_render(function()
@@ -84,18 +84,18 @@ on_render(function()
         end
     end
 
-    local base_pos = lp:get_position()
-    local dx, dy, dz = base_pos:x(), base_pos:y(), base_pos:z()
-    local h_start = 1.85  
-    local v_gap = 0.3     
+    local start_x = menu_elements.pos_x:get()
+    local start_y = menu_elements.pos_y:get()
+    
+    local v_gap = 25     
     local f_size = 20
 
     pcall(function()
-        draw_text_with_shadow("Session: " .. format_time(elapsed), vec3:new(dx, dy, dz + h_start), f_size, colors.white)
-        draw_text_with_shadow("Gained: +" .. format_num(gained), vec3:new(dx, dy, dz + h_start - v_gap), f_size, colors.green)
-        draw_text_with_shadow("Avg/Hr: " .. format_num(exp_per_hour), vec3:new(dx, dy, dz + h_start - (v_gap * 2)), f_size, colors.magenta)
-        draw_text_with_shadow("Remaining: " .. format_num(needed), vec3:new(dx, dy, dz + h_start - (v_gap * 3)), f_size, colors.yellow)
-        draw_text_with_shadow("ETA: " .. eta, vec3:new(dx, dy, dz + h_start - (v_gap * 4)), f_size, colors.cyan)
+        draw_text_2d_with_shadow("Session: " .. format_time(elapsed), start_x, start_y, f_size, colors.white)
+        draw_text_2d_with_shadow("Gained: +" .. format_num(gained), start_x, start_y + v_gap, f_size, colors.green)
+        draw_text_2d_with_shadow("Avg/Hr: " .. format_num(exp_per_hour), start_x, start_y + (v_gap * 2), f_size, colors.magenta)
+        draw_text_2d_with_shadow("Remaining: " .. format_num(needed), start_x, start_y + (v_gap * 3), f_size, colors.yellow)
+        draw_text_2d_with_shadow("ETA: " .. eta, start_x, start_y + (v_gap * 4), f_size, colors.cyan)
     end)
 end)
 
@@ -103,6 +103,10 @@ on_render_menu(function()
     if tree_node:new(0):push("EXP Tracker") then
         menu_elements.main_toggle:render("Enable Tracker", "Displays session stats")
         menu_elements.reset_toggle:render("Manual Reset", "Resets counter and timer to 0")
+        
+        menu_elements.pos_x:render("X Position", "Move UI horizontally across the screen")
+        menu_elements.pos_y:render("Y Position", "Move UI vertically up and down the screen")
+        
         tree_node:pop()
     end
 end)
