@@ -1,3 +1,4 @@
+local plugin_version = "1.4"
 local session_start_time = 0
 local starting_exp = 0
 local current_level = 0
@@ -102,10 +103,11 @@ on_render(function()
 end)
 
 on_render_menu(function()
-    if tree_node:new(0):push("EXP Tracker") then
+    if tree_node:new(0):push("U | Exp Tracker | Raff | v" .. plugin_version) then
         menu_elements.main_toggle:render("Enable Tracker", "Displays session stats")
         menu_elements.reset_toggle:render("Manual Reset", "Resets counter and timer to 0")
         
+        -- Layout Sliders Group
         menu_elements.pos_x:render("X Position", "Move UI horizontally across the screen")
         menu_elements.pos_y:render("Y Position", "Move UI vertically up and down the screen")
         menu_elements.font_size:render("Font Size", "Adjust the scale of the overlay text")
