@@ -15,8 +15,11 @@ local colors = {
 local menu_elements = {
     main_toggle = checkbox:new(true, get_hash("EXP_TRACKER")),
     reset_toggle = checkbox:new(false, get_hash("EXP_RESET_TOGGLE")),
+
     pos_x = slider_int:new(0, 3840, 50, get_hash("EXP_TRACKER_X")),
     pos_y = slider_int:new(0, 2160, 200, get_hash("EXP_TRACKER_Y")),
+    font_size = slider_int:new(10, 50, 20, get_hash("EXP_TRACKER_FONT_SIZE")),
+    line_gap = slider_int:new(10, 60, 25, get_hash("EXP_TRACKER_LINE_GAP")),
 }
 
 local function format_time(seconds)
@@ -86,9 +89,8 @@ on_render(function()
 
     local start_x = menu_elements.pos_x:get()
     local start_y = menu_elements.pos_y:get()
-    
-    local v_gap = 25     
-    local f_size = 20
+    local f_size = menu_elements.font_size:get()
+    local v_gap = menu_elements.line_gap:get()     
 
     pcall(function()
         draw_text_2d_with_shadow("Session: " .. format_time(elapsed), start_x, start_y, f_size, colors.white)
@@ -106,6 +108,8 @@ on_render_menu(function()
         
         menu_elements.pos_x:render("X Position", "Move UI horizontally across the screen")
         menu_elements.pos_y:render("Y Position", "Move UI vertically up and down the screen")
+        menu_elements.font_size:render("Font Size", "Adjust the scale of the overlay text")
+        menu_elements.line_gap:render("Line Gap", "Adjust the vertical spacing between tracking metrics")
         
         tree_node:pop()
     end
