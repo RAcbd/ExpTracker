@@ -1,8 +1,10 @@
-local plugin_version = "1.4"
+local utils = require 'core.utils'
+local plugin_version = "1.5"
 local session_start_time = 0
 local starting_exp = 0
 local current_level = 0
 local is_initialized = false
+local town_time_buffer = 0
 
 local colors = {
     white = color.new(255, 255, 255, 255),
@@ -16,7 +18,6 @@ local colors = {
 local menu_elements = {
     main_toggle = checkbox:new(true, get_hash("EXP_TRACKER")),
     reset_toggle = checkbox:new(false, get_hash("EXP_RESET_TOGGLE")),
-
     pos_x = slider_int:new(0, 3840, 50, get_hash("EXP_TRACKER_X")),
     pos_y = slider_int:new(0, 2160, 200, get_hash("EXP_TRACKER_Y")),
     font_size = slider_int:new(10, 50, 20, get_hash("EXP_TRACKER_FONT_SIZE")),
@@ -44,7 +45,6 @@ end
 
 local function draw_text_2d_with_shadow(text, x, y, size, col)
     local shadow_offset = 2
-    
     graphics.text_2d(text, vec2:new(x + shadow_offset, y + shadow_offset), size, colors.black)
     graphics.text_2d(text, vec2:new(x, y), size, col)
 end
@@ -64,26 +64,46 @@ on_render(function()
     
     if lp_exp == 0 then return end
 
-    if menu_elements.reset_toggle:get() or not is_initialized or lp_level > current_level then
+    -- Using the utils module from core/utils.lua
+    local in_town = utils.is_in_town()
+
+    if menu_elements.reset_toggle:get() or not is_initialized or (lp_level > current_level and not in_town) then
         starting_exp = lp_exp
         current_level = lp_level
         session_start_time = get_time_since_inject()
+        town_time_buffer = 0
         is_initialized = true
         menu_elements.reset_toggle:set(false)
     end
 
+    local total_runtime = get_time_since_inject() - session_start_time
+    
+    -- Lazy Start: Keeps timer at zero while standing in town upon first injection
+    if is_initialized and in_town and (total_runtime - town_time_buffer) < 1 then
+        session_start_time = get_time_since_inject()
+        town_time_buffer = 0
+    end
+
     local gained = lp_exp - starting_exp
-    local elapsed = get_time_since_inject() - session_start_time
+    local elapsed = total_runtime - town_time_buffer
 
     local exp_per_hour = 0
     local eta = "00:00:00"
 
-    if elapsed > 0.1 then
-        exp_per_hour = (gained / elapsed) * 3600
-        if gained > 0 then
-            local exp_per_sec = gained / elapsed
-            if exp_per_sec > 0 then
-                eta = format_time(needed / exp_per_sec)
+    if in_town then
+        town_time_buffer = total_runtime - elapsed
+        eta = "In Town - Paused"
+        if elapsed > 0.1 then
+            exp_per_hour = (gained / elapsed) * 3600
+        end
+    else
+        if elapsed > 0.1 then
+            exp_per_hour = (gained / elapsed) * 3600
+            if gained > 0 then
+                local exp_per_sec = gained / elapsed
+                if exp_per_sec > 0 then
+                    eta = format_time(needed / exp_per_sec)
+                end
             end
         end
     end
@@ -98,21 +118,23 @@ on_render(function()
         draw_text_2d_with_shadow("Gained: +" .. format_num(gained), start_x, start_y + v_gap, f_size, colors.green)
         draw_text_2d_with_shadow("Avg/Hr: " .. format_num(exp_per_hour), start_x, start_y + (v_gap * 2), f_size, colors.magenta)
         draw_text_2d_with_shadow("Remaining: " .. format_num(needed), start_x, start_y + (v_gap * 3), f_size, colors.yellow)
-        draw_text_2d_with_shadow("ETA: " .. eta, start_x, start_y + (v_gap * 4), f_size, colors.cyan)
+        
+        local eta_color = in_town and colors.yellow or colors.cyan
+        draw_text_2d_with_shadow("ETA: " .. eta, start_x, start_y + (v_gap * 4), f_size, eta_color)
     end)
 end)
 
 on_render_menu(function()
-    if tree_node:new(0):push("U | Exp Tracker | Raff | v" .. plugin_version) then
+    local main_tree = tree_node:new(0)
+    if main_tree:push("U | Exp Tracker | Raff | v" .. plugin_version) then
         menu_elements.main_toggle:render("Enable Tracker", "Displays session stats")
         menu_elements.reset_toggle:render("Manual Reset", "Resets counter and timer to 0")
         
-        -- Layout Sliders Group
-        menu_elements.pos_x:render("X Position", "Move UI horizontally across the screen")
-        menu_elements.pos_y:render("Y Position", "Move UI vertically up and down the screen")
-        menu_elements.font_size:render("Font Size", "Adjust the scale of the overlay text")
-        menu_elements.line_gap:render("Line Gap", "Adjust the vertical spacing between tracking metrics")
+        menu_elements.pos_x:render("X Position", "Move UI horizontally")
+        menu_elements.pos_y:render("Y Position", "Move UI vertically")
+        menu_elements.font_size:render("Font Size", "Adjust text scale")
+        menu_elements.line_gap:render("Line Gap", "Adjust vertical spacing")
         
-        tree_node:pop()
+        main_tree:pop()
     end
 end)
